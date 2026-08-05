@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>Дашборд образовательных метрик</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" />
-  <link rel="stylesheet" href="styles.css?v=20260805-6" />
+  <link rel="stylesheet" href="styles.css?v=20260805-7" />
   <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 </head>
@@ -80,12 +80,27 @@
         <span id="tableCount" class="table-count">0 строк</span>
       </div>
       <div class="table-scroll">
-        <table>
+        <table class="details-table">
+          <colgroup>
+            <col class="col-period" />
+            <col class="col-course" />
+            <col class="col-stream" />
+            <col class="col-type" />
+            <col class="col-metric" />
+            <col class="col-metric-small" />
+            <col class="col-metric-small" />
+            <col class="col-metric" />
+          </colgroup>
           <thead>
             <tr>
-              <th>Период</th><th>Курс</th><th>Поток</th><th>Тип потока</th>
-              <th class="num">Всего студентов</th><th class="num">CoR</th>
-              <th class="num">%CoR</th><th class="num">% Успеваемость</th>
+              <th class="cell-period">Период</th>
+              <th class="cell-course">Курс</th>
+              <th class="cell-stream">Поток</th>
+              <th class="cell-type">Тип потока</th>
+              <th class="num">Всего студентов</th>
+              <th class="num">CoR</th>
+              <th class="num">%CoR</th>
+              <th class="num">% Успеваемость</th>
             </tr>
           </thead>
           <tbody id="detailsBody"></tbody>
@@ -126,6 +141,6 @@
     </footer>
   </main>
 
-  <script src="app.js?v=20260805-6"></script>
+  <script src="app.js?v=20260805-7"></script>
 </body>
 </html>
