@@ -388,10 +388,10 @@
     el('tableCount').textContent = `${fmtInt.format(sorted.length)} ${plural(sorted.length, ['строка', 'строки', 'строк'])}`;
     el('detailsBody').innerHTML = sorted.map((row) => `
       <tr>
-        <td><span class="period-pill">${escapeHtml(periodText(row))}</span></td>
-        <td>${escapeHtml(row.course)}</td>
-        <td>${escapeHtml(row.stream)}</td>
-        <td>${escapeHtml(row.typePotok)}</td>
+        <td class="cell-period"><span class="period-pill">${escapeHtml(periodText(row))}</span></td>
+        <td class="cell-course" title="${escapeHtml(row.course)}"><span class="cell-text">${escapeHtml(row.course)}</span></td>
+        <td class="cell-stream" title="${escapeHtml(row.stream)}"><span class="cell-text">${escapeHtml(row.stream)}</span></td>
+        <td class="cell-type"><span class="type-pill">${escapeHtml(row.typePotok)}</span></td>
         <td class="num">${fmtInt.format(row.totalNew)}</td>
         <td class="num">${fmtInt.format(row.totalCor)}</td>
         <td class="num ${rateClass(row.cor)}">${row.cor === null ? '—' : fmtPct.format(row.cor)}</td>
