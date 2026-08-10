@@ -12,7 +12,7 @@
     text: '#5d687f'
   };
 
-  const state = { rows: [], charts: {}, mappingError: false, preferredType: 'b2c' };
+  const state = { allRows: [], rows: [], charts: {}, mappingError: false, preferredType: 'b2c' };
   const el = (id) => document.getElementById(id);
   const fmtInt = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 });
   const fmtPct = new Intl.NumberFormat('ru-RU', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -237,15 +237,15 @@
     typeSelect.innerHTML = '<option value="all">Все типы</option>';
     yearSelect.innerHTML = '<option value="all">Все годы</option>';
 
-    [...new Set(state.rows.map((r) => r.course))]
+    [...new Set(state.allRows.map((r) => r.course))]
       .sort((a, b) => a.localeCompare(b, 'ru'))
       .forEach((course) => option(courseSelect, course, course));
 
-    [...new Set(state.rows.map((r) => r.typePotok).filter(Boolean))]
+    [...new Set(state.allRows.map((r) => r.typePotok).filter(Boolean))]
       .sort((a, b) => a.localeCompare(b, 'ru'))
       .forEach((typePotok) => option(typeSelect, typePotok, typePotok));
 
-    [...new Set(state.rows.map((r) => r.year).filter(Boolean))]
+    [...new Set(state.allRows.map((r) => r.year).filter(Boolean))]
       .sort((a, b) => b - a)
       .forEach((year) => option(yearSelect, String(year), String(year)));
 
@@ -477,9 +477,15 @@
 
   function setRows(rows) {
     state.mappingError = false;
-    state.rows = rows
+
+    // Для списков фильтров сохраняем все строки из Grist.
+    // Будущие и недатированные потоки исключаются только из аналитики.
+    state.allRows = rows
       .map(normalize)
-      .filter((row) => row.course && hasEnded(row));
+      .filter((row) => row.course);
+
+    state.rows = state.allRows.filter(hasEnded);
+
     syncFilters();
     render();
   }
@@ -507,6 +513,7 @@
     grist.onRecords((records) => {
       const mapped = grist.mapColumnNames(records);
       if (!mapped) {
+        state.allRows = [];
         state.rows = [];
         state.mappingError = true;
         syncFilters();
