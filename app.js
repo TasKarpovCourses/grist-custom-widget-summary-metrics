@@ -246,18 +246,101 @@
     return 'rate-low';
   }
 
-  function renderKpis(rows) {
-    const kpi = aggregate(rows);
-    const completedTotal = rows
+  function comparisonRowsForSelectedPeriod() {
+    const yearValue = el('yearFilter').value;
+    const quarterValue = el('quarterFilter').value;
+
+    if (yearValue === 'all') return null;
+
+    const course = el('courseFilter').value;
+    const typePotok = el('typeFilter').value;
+    const year = Number(yearValue);
+    const quarter = quarterValue === 'all' ? null : Number(quarterValue);
+
+    const baseRows = state.rows.filter((row) =>
+      (course === 'all' || row.course === course) &&
+      (typePotok === 'all' || row.typePotok === typePotok)
+    );
+
+    if (quarter === null) {
+      return {
+        label: 'к предыдущему году',
+        current: baseRows.filter((row) => row.year === year),
+        previous: baseRows.filter((row) => row.year === year - 1)
+      };
+    }
+
+    const previousQuarter = quarter === 1 ? 4 : quarter - 1;
+    const previousYear = quarter === 1 ? year - 1 : year;
+
+    return {
+      label: 'к предыдущему кварталу',
+      current: baseRows.filter((row) => row.year === year && row.quarter === quarter),
+      previous: baseRows.filter((row) => row.year === previousYear && row.quarter === previousQuarter)
+    };
+  }
+
+  function completedTotal(rows) {
+    return rows
       .filter(hasEnded)
       .reduce((sum, row) => sum + row.totalCor, 0);
+  }
+
+  function formatComparison(current, previous, label, percent = false) {
+    if (current === null || current === undefined || previous === null || previous === undefined) {
+      return `Нет данных ${label}`;
+    }
+
+    const diff = current - previous;
+    const arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '→';
+    const absDiff = Math.abs(diff);
+
+    if (percent) {
+      const points = new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(absDiff * 100);
+      return `${arrow} ${points} п.п. ${label}`;
+    }
+
+    return `${arrow} ${fmtInt.format(absDiff)} ${label}`;
+  }
+
+  function setKpiComparison(id, textValue) {
+    const node = el(id);
+    if (node) node.textContent = textValue;
+  }
+
+  function renderKpis(rows) {
+    const kpi = aggregate(rows);
+    const endedTotal = completedTotal(rows);
 
     el('kpiTotal').textContent = fmtInt.format(kpi.total);
     el('kpiStreams').textContent = `${fmtInt.format(kpi.streams)} ${plural(kpi.streams, ['поток', 'потока', 'потоков'])}`;
-    el('kpiCompleted').textContent = fmtInt.format(completedTotal);
+    el('kpiCompleted').textContent = fmtInt.format(endedTotal);
     el('kpiCor').textContent = kpi.cor === null ? '—' : fmtPct.format(kpi.cor);
     el('kpiPerformance').textContent = kpi.performance === null ? '—' : fmtPct.format(kpi.performance);
     el('kpiScored').textContent = `${fmtInt.format(kpi.scored)} набрали более 50% баллов`;
+
+    const comparison = comparisonRowsForSelectedPeriod();
+    if (!comparison) {
+      const hint = 'Выберите год для сравнения';
+      ['kpiTotalCompare', 'kpiCompletedCompare', 'kpiCorCompare', 'kpiPerformanceCompare']
+        .forEach((id) => setKpiComparison(id, hint));
+      return;
+    }
+
+    if (comparison.previous.length === 0) {
+      const hint = `Нет данных ${comparison.label}`;
+      ['kpiTotalCompare', 'kpiCompletedCompare', 'kpiCorCompare', 'kpiPerformanceCompare']
+        .forEach((id) => setKpiComparison(id, hint));
+      return;
+    }
+
+    const current = aggregate(comparison.current);
+    const previous = aggregate(comparison.previous);
+
+    setKpiComparison('kpiTotalCompare', formatComparison(current.total, previous.total, comparison.label));
+    setKpiComparison('kpiCompletedCompare', formatComparison(completedTotal(comparison.current), completedTotal(comparison.previous), comparison.label));
+    setKpiComparison('kpiCorCompare', formatComparison(current.cor, previous.cor, comparison.label, true));
+    setKpiComparison('kpiPerformanceCompare', formatComparison(current.performance, previous.performance, comparison.label, true));
   }
 
   function plural(value, forms) {
@@ -372,8 +455,10 @@
         <td class="cell-course" title="${escapeHtml(row.course)}"><span class="cell-text">${escapeHtml(row.course)}</span></td>
         <td class="cell-stream" title="${escapeHtml(row.stream)}"><span class="cell-text">${escapeHtml(row.stream)}</span></td>
         <td class="cell-type"><span class="type-pill">${escapeHtml(row.typePotok)}</span></td>
+        <td class="cell-status"><span class="status-pill ${hasEnded(row) ? 'status-done' : 'status-active'}">${hasEnded(row) ? 'Завершён' : 'Идёт'}</span></td>
         <td class="num">${fmtInt.format(row.totalNew)}</td>
         <td class="num">${fmtInt.format(row.totalCor)}</td>
+        <td class="num">${fmtInt.format(row.totalScoredMoreHalf)}</td>
         <td class="num ${rateClass(row.cor)}">${row.cor === null ? '—' : fmtPct.format(row.cor)}</td>
         <td class="num ${rateClass(row.performance)}">${row.performance === null ? '—' : fmtPct.format(row.performance)}</td>
       </tr>`).join('');
