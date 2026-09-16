@@ -469,8 +469,8 @@
     el('detailsBody').innerHTML = sorted.map((row) => `
       <tr>
         <td class="cell-period cell-center"><span class="period-pill">${escapeHtml(periodText(row))}</span></td>
-        <td class="cell-course cell-right" title="${escapeHtml(row.course)}"><span class="cell-text">${escapeHtml(row.course)}</span></td>
-        <td class="cell-stream cell-right" title="${escapeHtml(row.stream)}"><span class="cell-text">${escapeHtml(row.stream)}</span></td>
+        <td class="cell-course cell-left" title="${escapeHtml(row.course)}"><span class="cell-text">${escapeHtml(row.course)}</span></td>
+        <td class="cell-stream cell-left" title="${escapeHtml(row.stream)}"><span class="cell-text">${escapeHtml(row.stream)}</span></td>
         <td class="cell-type cell-center"><span class="type-pill">${escapeHtml(row.typePotok)}</span></td>
         <td class="cell-status cell-center"><span class="status-pill ${hasEnded(row) ? 'status-done' : 'status-active'}">${hasEnded(row) ? 'Завершён' : 'Идёт'}</span></td>
         <td class="cell-center">${fmtInt.format(row.totalNew)}</td>
