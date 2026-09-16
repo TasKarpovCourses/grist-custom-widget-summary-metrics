@@ -257,8 +257,11 @@
     const typePotok = el('typeFilter').value;
     const year = Number(yearValue);
     const quarter = Number(quarterValue);
+
     const previousQuarter = quarter === 1 ? 4 : quarter - 1;
     const previousYear = quarter === 1 ? year - 1 : year;
+    const nextQuarter = quarter === 4 ? 1 : quarter + 1;
+    const nextYear = quarter === 4 ? year + 1 : year;
 
     const baseRows = state.rows.filter((row) =>
       row.course === course &&
@@ -266,9 +269,9 @@
     );
 
     return {
-      label: 'к предыдущему кварталу',
       current: baseRows.filter((row) => row.year === year && row.quarter === quarter),
-      previous: baseRows.filter((row) => row.year === previousYear && row.quarter === previousQuarter)
+      previous: baseRows.filter((row) => row.year === previousYear && row.quarter === previousQuarter),
+      next: baseRows.filter((row) => row.year === nextYear && row.quarter === nextQuarter)
     };
   }
 
@@ -278,10 +281,10 @@
       .reduce((sum, row) => sum + row.totalCor, 0);
   }
 
-  function comparisonValue(current, previous, label, percent = false) {
-    if (current === null || current === undefined || previous === null || previous === undefined) return null;
+  function comparisonValue(current, reference, label, percent = false) {
+    if (current === null || current === undefined || reference === null || reference === undefined) return null;
 
-    const diff = current - previous;
+    const diff = current - reference;
     const arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '→';
     const tone = diff > 0 ? 'good' : diff < 0 ? 'bad' : 'neutral';
     const absDiff = Math.abs(diff);
@@ -294,26 +297,25 @@
     return { text: `${arrow} ${fmtInt.format(absDiff)} ${label}`, tone };
   }
 
-  function setKpiComparison(id, comparison = null) {
+  function setKpiComparisons(id, comparisons = []) {
     const node = el(id);
     if (!node) return;
 
-    node.classList.remove('compare-good', 'compare-bad', 'compare-neutral');
+    node.innerHTML = '';
 
-    if (!comparison) {
-      node.textContent = '';
-      node.classList.add('hidden');
-      return;
-    }
+    comparisons.filter(Boolean).forEach((comparison) => {
+      const line = document.createElement('span');
+      line.className = `kpi-compare-line compare-${comparison.tone}`;
+      line.textContent = comparison.text;
+      node.appendChild(line);
+    });
 
-    node.textContent = comparison.text;
-    node.classList.remove('hidden');
-    node.classList.add(`compare-${comparison.tone}`);
+    node.classList.toggle('hidden', node.childElementCount === 0);
   }
 
   function hideKpiComparisons() {
     ['kpiTotalCompare', 'kpiCompletedCompare', 'kpiCorCompare', 'kpiPerformanceCompare']
-      .forEach((id) => setKpiComparison(id));
+      .forEach((id) => setKpiComparisons(id));
   }
 
   function renderKpis(rows) {
@@ -328,18 +330,34 @@
     el('kpiScored').textContent = `${fmtInt.format(kpi.scored)} набрали более 50% баллов`;
 
     const comparison = comparisonRowsForSelectedPeriod();
-    if (!comparison || comparison.current.length === 0 || comparison.previous.length === 0) {
+    if (!comparison || comparison.current.length === 0) {
       hideKpiComparisons();
       return;
     }
 
     const current = aggregate(comparison.current);
-    const previous = aggregate(comparison.previous);
+    const previous = comparison.previous.length ? aggregate(comparison.previous) : null;
+    const next = comparison.next.length ? aggregate(comparison.next) : null;
 
-    setKpiComparison('kpiTotalCompare', comparisonValue(current.total, previous.total, comparison.label));
-    setKpiComparison('kpiCompletedCompare', comparisonValue(completedTotal(comparison.current), completedTotal(comparison.previous), comparison.label));
-    setKpiComparison('kpiCorCompare', comparisonValue(current.cor, previous.cor, comparison.label, true));
-    setKpiComparison('kpiPerformanceCompare', comparisonValue(current.performance, previous.performance, comparison.label, true));
+    setKpiComparisons('kpiTotalCompare', [
+      previous ? comparisonValue(current.total, previous.total, 'к предыдущему кварталу') : null,
+      next ? comparisonValue(next.total, current.total, 'в следующем квартале') : null
+    ]);
+
+    setKpiComparisons('kpiCompletedCompare', [
+      previous ? comparisonValue(completedTotal(comparison.current), completedTotal(comparison.previous), 'к предыдущему кварталу') : null,
+      next ? comparisonValue(completedTotal(comparison.next), completedTotal(comparison.current), 'в следующем квартале') : null
+    ]);
+
+    setKpiComparisons('kpiCorCompare', [
+      previous ? comparisonValue(current.cor, previous.cor, 'к предыдущему кварталу', true) : null,
+      next ? comparisonValue(next.cor, current.cor, 'в следующем квартале', true) : null
+    ]);
+
+    setKpiComparisons('kpiPerformanceCompare', [
+      previous ? comparisonValue(current.performance, previous.performance, 'к предыдущему кварталу', true) : null,
+      next ? comparisonValue(next.performance, current.performance, 'в следующем квартале', true) : null
+    ]);
   }
 
   function plural(value, forms) {
@@ -450,16 +468,16 @@
     el('tableCount').textContent = `${fmtInt.format(sorted.length)} ${plural(sorted.length, ['строка', 'строки', 'строк'])}`;
     el('detailsBody').innerHTML = sorted.map((row) => `
       <tr>
-        <td class="cell-period"><span class="period-pill">${escapeHtml(periodText(row))}</span></td>
-        <td class="cell-course" title="${escapeHtml(row.course)}"><span class="cell-text">${escapeHtml(row.course)}</span></td>
-        <td class="cell-stream" title="${escapeHtml(row.stream)}"><span class="cell-text">${escapeHtml(row.stream)}</span></td>
-        <td class="cell-type"><span class="type-pill">${escapeHtml(row.typePotok)}</span></td>
-        <td class="cell-status"><span class="status-pill ${hasEnded(row) ? 'status-done' : 'status-active'}">${hasEnded(row) ? 'Завершён' : 'Идёт'}</span></td>
-        <td class="num">${fmtInt.format(row.totalNew)}</td>
-        <td class="num">${fmtInt.format(row.totalCor)}</td>
-        <td class="num">${fmtInt.format(row.totalScoredMoreHalf)}</td>
-        <td class="num ${rateClass(row.cor)}">${row.cor === null ? '—' : fmtPct.format(row.cor)}</td>
-        <td class="num ${rateClass(row.performance)}">${row.performance === null ? '—' : fmtPct.format(row.performance)}</td>
+        <td class="cell-period cell-center"><span class="period-pill">${escapeHtml(periodText(row))}</span></td>
+        <td class="cell-course cell-right" title="${escapeHtml(row.course)}"><span class="cell-text">${escapeHtml(row.course)}</span></td>
+        <td class="cell-stream cell-right" title="${escapeHtml(row.stream)}"><span class="cell-text">${escapeHtml(row.stream)}</span></td>
+        <td class="cell-type cell-center"><span class="type-pill">${escapeHtml(row.typePotok)}</span></td>
+        <td class="cell-status cell-center"><span class="status-pill ${hasEnded(row) ? 'status-done' : 'status-active'}">${hasEnded(row) ? 'Завершён' : 'Идёт'}</span></td>
+        <td class="cell-center">${fmtInt.format(row.totalNew)}</td>
+        <td class="cell-center">${fmtInt.format(row.totalCor)}</td>
+        <td class="cell-center">${fmtInt.format(row.totalScoredMoreHalf)}</td>
+        <td class="cell-center ${rateClass(row.cor)}">${row.cor === null ? '—' : fmtPct.format(row.cor)}</td>
+        <td class="cell-center ${rateClass(row.performance)}">${row.performance === null ? '—' : fmtPct.format(row.performance)}</td>
       </tr>`).join('');
   }
 
