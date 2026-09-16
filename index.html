@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>Дашборд образовательных метрик</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" />
-  <link rel="stylesheet" href="styles.css?v=20260916-10" />
+  <link rel="stylesheet" href="styles.css?v=20260916-11" />
   <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 </head>
@@ -58,19 +58,19 @@
     <section class="kpi-grid dashboard-content" aria-label="Ключевые показатели">
       <article class="kpi-card">
         <div class="kpi-icon kpi-blue">Σ</div>
-        <div><p>Всего студентов</p><strong id="kpiTotal">—</strong><small id="kpiStreams">—</small><small id="kpiTotalCompare" class="kpi-compare">—</small></div>
+        <div class="kpi-content"><p>Всего студентов</p><strong id="kpiTotal">—</strong><small id="kpiStreams">—</small><small id="kpiTotalCompare" class="kpi-compare hidden"></small></div>
       </article>
       <article class="kpi-card">
         <div class="kpi-icon kpi-cyan">✓</div>
-        <div><p>Окончили обучение</p><strong id="kpiCompleted">—</strong><small id="kpiCompletedCompare" class="kpi-compare">—</small></div>
+        <div class="kpi-content"><p>Окончили обучение</p><strong id="kpiCompleted">—</strong><small id="kpiCompletedCompare" class="kpi-compare hidden"></small></div>
       </article>
       <article class="kpi-card">
         <div class="kpi-icon kpi-violet">%</div>
-        <div><p>CoR</p><strong id="kpiCor">—</strong><small id="kpiCorCompare" class="kpi-compare">—</small></div>
+        <div class="kpi-content"><p>CoR</p><strong id="kpiCor">—</strong><small id="kpiCorCompare" class="kpi-compare hidden"></small></div>
       </article>
       <article class="kpi-card">
         <div class="kpi-icon kpi-green">★</div>
-        <div><p>Успеваемость</p><strong id="kpiPerformance">—</strong><small id="kpiScored">—</small><small id="kpiPerformanceCompare" class="kpi-compare">—</small></div>
+        <div class="kpi-content"><p>Успеваемость</p><strong id="kpiPerformance">—</strong><small id="kpiScored">—</small><small id="kpiPerformanceCompare" class="kpi-compare hidden"></small></div>
       </article>
     </section>
 
@@ -145,6 +145,6 @@
     </footer>
   </main>
 
-  <script src="app.js?v=20260916-10"></script>
+  <script src="app.js?v=20260916-11"></script>
 </body>
 </html>
