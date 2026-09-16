@@ -76,45 +76,19 @@
     return validDate(parsed) ? endOfDay(parsed) : null;
   }
 
-  function endOfMonth(year, month) {
-    if (!year || !month || month < 1 || month > 12) return null;
-    return new Date(year, month, 0, 23, 59, 59, 999);
-  }
-
   function normalize(raw) {
-    const totalNew = number(raw.total_new) ?? 0;
-    const totalCor = number(raw.total_cor) ?? 0;
-    const totalCompleted = number(raw.total_completed) ?? 0;
-    const totalScoredMoreHalf = number(raw.total_scored_more_half) ?? 0;
-    const explicitEndDate = parseDate(raw.endDate);
-
-    let month = number(raw.month);
-    let year = number(raw.year);
-    let quarter = number(raw.quarter);
-
-    if (explicitEndDate) {
-      month = explicitEndDate.getMonth() + 1;
-      year = explicitEndDate.getFullYear();
-      quarter = Math.floor((month - 1) / 3) + 1;
-    } else if (!quarter && month) {
-      quarter = Math.floor((month - 1) / 3) + 1;
-    }
-
-    const endDate = explicitEndDate || endOfMonth(year, month);
-
     return {
       id: raw.id,
       course: text(raw.course) || 'Без названия',
       stream: text(raw.stream) || '—',
       typePotok: text(raw.type_potok) || 'Без типа',
-      month,
-      quarter,
-      year,
-      endDate,
-      totalNew,
-      totalCor,
-      totalCompleted,
-      totalScoredMoreHalf,
+      endDate: parseDate(raw.endDate),
+      month: number(raw.month),
+      quarter: number(raw.quarter),
+      year: number(raw.year),
+      totalNew: number(raw.total_new) ?? 0,
+      totalCor: number(raw.total_cor) ?? 0,
+      totalScoredMoreHalf: number(raw.total_scored_more_half) ?? 0,
       cor: percentage(raw.CoR),
       performance: percentage(raw.completed)
     };
@@ -124,35 +98,38 @@
     return validDate(row.endDate);
   }
 
+  function hasEnded(row) {
+    const today = endOfDay(new Date());
+    return hasEndDate(row) && row.endDate.getTime() <= today.getTime();
+  }
+
   function aggregate(rows) {
     const sums = rows.reduce((acc, row) => {
       acc.totalNew += row.totalNew;
       acc.totalCor += row.totalCor;
-      acc.totalCompleted += row.totalCompleted;
       acc.totalScoredMoreHalf += row.totalScoredMoreHalf;
 
       if (row.cor !== null) {
         acc.corSimpleSum += row.cor;
         acc.corSimpleCount += 1;
-        if (row.totalCor > 0) {
-          acc.corWeightedSum += row.cor * row.totalCor;
-          acc.corWeight += row.totalCor;
+        if (row.totalNew > 0) {
+          acc.corWeightedSum += row.cor * row.totalNew;
+          acc.corWeight += row.totalNew;
         }
       }
 
       if (row.performance !== null) {
         acc.performanceSimpleSum += row.performance;
         acc.performanceSimpleCount += 1;
-        if (row.totalCompleted > 0) {
-          acc.performanceWeightedSum += row.performance * row.totalCompleted;
-          acc.performanceWeight += row.totalCompleted;
+        if (row.totalCor > 0) {
+          acc.performanceWeightedSum += row.performance * row.totalCor;
+          acc.performanceWeight += row.totalCor;
         }
       }
       return acc;
     }, {
       totalNew: 0,
       totalCor: 0,
-      totalCompleted: 0,
       totalScoredMoreHalf: 0,
       corWeightedSum: 0,
       corWeight: 0,
@@ -167,7 +144,6 @@
     return {
       total: sums.totalNew,
       totalCor: sums.totalCor,
-      completed: sums.totalCompleted,
       scored: sums.totalScoredMoreHalf,
       streams: rows.length,
       cor: sums.corWeight > 0
@@ -272,9 +248,13 @@
 
   function renderKpis(rows) {
     const kpi = aggregate(rows);
+    const completedTotal = rows
+      .filter(hasEnded)
+      .reduce((sum, row) => sum + row.totalCor, 0);
+
     el('kpiTotal').textContent = fmtInt.format(kpi.total);
     el('kpiStreams').textContent = `${fmtInt.format(kpi.streams)} ${plural(kpi.streams, ['поток', 'потока', 'потоков'])}`;
-    el('kpiCompleted').textContent = fmtInt.format(kpi.completed);
+    el('kpiCompleted').textContent = fmtInt.format(completedTotal);
     el('kpiCor').textContent = kpi.cor === null ? '—' : fmtPct.format(kpi.cor);
     el('kpiPerformance').textContent = kpi.performance === null ? '—' : fmtPct.format(kpi.performance);
     el('kpiScored').textContent = `${fmtInt.format(kpi.scored)} набрали более 50% баллов`;
@@ -491,16 +471,15 @@
         { name: 'course', title: 'Курс', description: 'Название курса', type: 'Text,Choice' },
         { name: 'stream', title: 'Поток', description: 'Номер или название потока' },
         { name: 'type_potok', title: 'Тип потока', description: 'Тип потока, например b2c', type: 'Text,Choice' },
-        { name: 'endDate', title: 'Дата окончания', description: 'Точная дата окончания потока. Необязательное поле', type: 'Date,DateTime', optional: true },
+        { name: 'endDate', title: 'Дата окончания', description: 'Дата окончания потока', type: 'Date,DateTime' },
         { name: 'month', title: 'Месяц окончания', description: 'Номер месяца от 1 до 12', type: 'Int,Numeric' },
         { name: 'quarter', title: 'Квартал окончания', description: 'Номер квартала от 1 до 4', type: 'Int,Numeric' },
         { name: 'year', title: 'Год окончания', description: 'Год окончания обучения', type: 'Int,Numeric' },
-        { name: 'total_new', title: 'Всего студентов', description: 'Готовое значение из колонки $total_new', type: 'Int,Numeric' },
-        { name: 'total_cor', title: 'CoR', description: 'Готовое числовое значение из колонки $total_cor', type: 'Int,Numeric' },
-        { name: 'total_completed', title: 'Окончили обучение', description: 'Готовое значение из колонки $total_completed', type: 'Int,Numeric' },
-        { name: 'total_scored_more_half', title: 'Набрали >50%', description: 'Готовое значение из колонки $total_scored_more_half', type: 'Int,Numeric' },
-        { name: 'CoR', title: '% CoR', description: 'Готовый процент из колонки $CoR', type: 'Numeric' },
-        { name: 'completed', title: '% Успеваемость', description: 'Готовый процент из колонки $completed', type: 'Numeric' }
+        { name: 'total_new', title: 'Всего студентов', description: 'Готовое значение из существующей колонки', type: 'Int,Numeric' },
+        { name: 'total_cor', title: 'CoR, кол-во', description: 'Готовое количество из существующей колонки', type: 'Int,Numeric' },
+        { name: 'total_scored_more_half', title: 'Набрали >50%, кол-во', description: 'Готовое количество из существующей колонки', type: 'Int,Numeric' },
+        { name: 'CoR', title: 'CoR, %', description: 'Готовый процент из существующей колонки', type: 'Numeric' },
+        { name: 'completed', title: 'Набрали >50%, %', description: 'Готовый процент из существующей колонки', type: 'Numeric' }
       ]
     });
 
@@ -526,22 +505,21 @@
         courses.forEach((course, ci) => {
           const totalNew = 70 + ci * 18 + quarter * 6 + (year - 2024) * 12;
           const totalCor = Math.max(totalNew - 3 - ci, 1);
-          const totalCompleted = Math.round(totalCor * (.72 + ci * .08 + quarter * .018));
-          const totalScoredMoreHalf = Math.round(totalCompleted * (.48 + ci * .07 + quarter * .025));
+          const totalScoredMoreHalf = Math.round(totalCor * (.48 + ci * .07 + quarter * .025));
           rows.push({
             id: id++,
             course,
             stream: `${year}-${quarter}-${ci + 1}`,
             type_potok: ci === 2 ? 'b2b' : 'b2c',
+            endDate: new Date(year, quarter * 3, 0),
             month: quarter * 3,
             quarter,
             year,
             total_new: totalNew,
             total_cor: totalCor,
-            total_completed: totalCompleted,
             total_scored_more_half: totalScoredMoreHalf,
-            CoR: totalCompleted / totalCor,
-            completed: totalScoredMoreHalf / totalCompleted
+            CoR: totalCor / totalNew,
+            completed: totalCor > 0 ? totalScoredMoreHalf / totalCor : 0
           });
         });
       }
