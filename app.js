@@ -247,31 +247,23 @@
   }
 
   function comparisonRowsForSelectedPeriod() {
+    const course = el('courseFilter').value;
     const yearValue = el('yearFilter').value;
     const quarterValue = el('quarterFilter').value;
 
-    if (yearValue === 'all') return null;
+    // Сравнение показываем только для конкретных курса, года и квартала.
+    if (course === 'all' || yearValue === 'all' || quarterValue === 'all') return null;
 
-    const course = el('courseFilter').value;
     const typePotok = el('typeFilter').value;
     const year = Number(yearValue);
-    const quarter = quarterValue === 'all' ? null : Number(quarterValue);
-
-    const baseRows = state.rows.filter((row) =>
-      (course === 'all' || row.course === course) &&
-      (typePotok === 'all' || row.typePotok === typePotok)
-    );
-
-    if (quarter === null) {
-      return {
-        label: 'к предыдущему году',
-        current: baseRows.filter((row) => row.year === year),
-        previous: baseRows.filter((row) => row.year === year - 1)
-      };
-    }
-
+    const quarter = Number(quarterValue);
     const previousQuarter = quarter === 1 ? 4 : quarter - 1;
     const previousYear = quarter === 1 ? year - 1 : year;
+
+    const baseRows = state.rows.filter((row) =>
+      row.course === course &&
+      (typePotok === 'all' || row.typePotok === typePotok)
+    );
 
     return {
       label: 'к предыдущему кварталу',
@@ -286,26 +278,42 @@
       .reduce((sum, row) => sum + row.totalCor, 0);
   }
 
-  function formatComparison(current, previous, label, percent = false) {
-    if (current === null || current === undefined || previous === null || previous === undefined) {
-      return `Нет данных ${label}`;
-    }
+  function comparisonValue(current, previous, label, percent = false) {
+    if (current === null || current === undefined || previous === null || previous === undefined) return null;
 
     const diff = current - previous;
     const arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '→';
+    const tone = diff > 0 ? 'good' : diff < 0 ? 'bad' : 'neutral';
     const absDiff = Math.abs(diff);
 
     if (percent) {
       const points = new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(absDiff * 100);
-      return `${arrow} ${points} п.п. ${label}`;
+      return { text: `${arrow} ${points} п.п. ${label}`, tone };
     }
 
-    return `${arrow} ${fmtInt.format(absDiff)} ${label}`;
+    return { text: `${arrow} ${fmtInt.format(absDiff)} ${label}`, tone };
   }
 
-  function setKpiComparison(id, textValue) {
+  function setKpiComparison(id, comparison = null) {
     const node = el(id);
-    if (node) node.textContent = textValue;
+    if (!node) return;
+
+    node.classList.remove('compare-good', 'compare-bad', 'compare-neutral');
+
+    if (!comparison) {
+      node.textContent = '';
+      node.classList.add('hidden');
+      return;
+    }
+
+    node.textContent = comparison.text;
+    node.classList.remove('hidden');
+    node.classList.add(`compare-${comparison.tone}`);
+  }
+
+  function hideKpiComparisons() {
+    ['kpiTotalCompare', 'kpiCompletedCompare', 'kpiCorCompare', 'kpiPerformanceCompare']
+      .forEach((id) => setKpiComparison(id));
   }
 
   function renderKpis(rows) {
@@ -320,27 +328,18 @@
     el('kpiScored').textContent = `${fmtInt.format(kpi.scored)} набрали более 50% баллов`;
 
     const comparison = comparisonRowsForSelectedPeriod();
-    if (!comparison) {
-      const hint = 'Выберите год для сравнения';
-      ['kpiTotalCompare', 'kpiCompletedCompare', 'kpiCorCompare', 'kpiPerformanceCompare']
-        .forEach((id) => setKpiComparison(id, hint));
-      return;
-    }
-
-    if (comparison.previous.length === 0) {
-      const hint = `Нет данных ${comparison.label}`;
-      ['kpiTotalCompare', 'kpiCompletedCompare', 'kpiCorCompare', 'kpiPerformanceCompare']
-        .forEach((id) => setKpiComparison(id, hint));
+    if (!comparison || comparison.current.length === 0 || comparison.previous.length === 0) {
+      hideKpiComparisons();
       return;
     }
 
     const current = aggregate(comparison.current);
     const previous = aggregate(comparison.previous);
 
-    setKpiComparison('kpiTotalCompare', formatComparison(current.total, previous.total, comparison.label));
-    setKpiComparison('kpiCompletedCompare', formatComparison(completedTotal(comparison.current), completedTotal(comparison.previous), comparison.label));
-    setKpiComparison('kpiCorCompare', formatComparison(current.cor, previous.cor, comparison.label, true));
-    setKpiComparison('kpiPerformanceCompare', formatComparison(current.performance, previous.performance, comparison.label, true));
+    setKpiComparison('kpiTotalCompare', comparisonValue(current.total, previous.total, comparison.label));
+    setKpiComparison('kpiCompletedCompare', comparisonValue(completedTotal(comparison.current), completedTotal(comparison.previous), comparison.label));
+    setKpiComparison('kpiCorCompare', comparisonValue(current.cor, previous.cor, comparison.label, true));
+    setKpiComparison('kpiPerformanceCompare', comparisonValue(current.performance, previous.performance, comparison.label, true));
   }
 
   function plural(value, forms) {
