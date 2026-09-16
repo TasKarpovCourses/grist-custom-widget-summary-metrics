@@ -374,7 +374,6 @@
         <td class="cell-type"><span class="type-pill">${escapeHtml(row.typePotok)}</span></td>
         <td class="num">${fmtInt.format(row.totalNew)}</td>
         <td class="num">${fmtInt.format(row.totalCor)}</td>
-        <td class="num">${fmtInt.format(row.totalCompleted)}</td>
         <td class="num ${rateClass(row.cor)}">${row.cor === null ? '—' : fmtPct.format(row.cor)}</td>
         <td class="num ${rateClass(row.performance)}">${row.performance === null ? '—' : fmtPct.format(row.performance)}</td>
       </tr>`).join('');
