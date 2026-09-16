@@ -143,10 +143,10 @@ h1 { margin: 0; font-size: clamp(26px, 3vw, 38px); letter-spacing: -.035em; }
   font-variant-numeric: tabular-nums;
 }
 .details-table .cell-right {
-  text-align: right;
+  text-align: left;
 }
 .details-table .cell-right .cell-text {
-  text-align: right;
+  text-align: left;
 }
 .details-table .cell-period,
 .details-table .cell-type,
