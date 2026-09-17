@@ -75,9 +75,15 @@ h1 { margin: 0; font-size: clamp(26px, 3vw, 38px); letter-spacing: -.035em; }
   margin-top: auto;
   padding-top: 7px;
   min-height: 39px;
+  font-size: 11px;
   font-weight: 800;
 }
-.kpi-compare-line { display: block; white-space: nowrap; }
+.kpi-compare-line {
+  display: block;
+  white-space: normal;
+  line-height: 1.25;
+  overflow-wrap: break-word;
+}
 .kpi-compare-line.compare-good { color: #16815e; }
 .kpi-compare-line.compare-bad { color: var(--danger); }
 .kpi-compare-line.compare-neutral { color: var(--muted); }
